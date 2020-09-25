@@ -1,0 +1,357 @@
+\documentclass[fleqn,10pt]{wlscirep}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tabu}
+%\usepackage{natbib}
+\title{Estimating Northern Fur Seal Pup Production: A Case Study of Batch Mark Abundance Estimation}
+
+\author[1,*]{Devin S. Johnson}
+\author[1]{Rodney G. Towell}
+\author[2]{Jason B. Baker}
+\affil[1]{Alaska Fisheries Science Center, National Marine Fisheries Service, Seattle, Washington, USA}
+\affil[2]{Pacific Islands Fisheries Science Center, National Marine Fisheries Service, Honolulu, Hawaii, USA}
+
+\affil[*]{Email: devin.johnson@noaa.gov}
+
+
+\keywords{Abundance, Approximation, Capture-recapture, Hierarchical model, Markov chain Monte Carlo}
+
+\begin{abstract}
+We describe a hierarchical N-mixture model for estimating northern fur seal pup production from batch mark-resight data. Our goal was to improve upon a traditional design-based estimation method used for over 50 years. To this end, we propose a hierarchical N-mixture model to account for differences in animal availability for resighting and observer detection probabilities. A Bayesian approach is used for inference with three separate methods proposed for necessary computations. First a straightforward posterior sample is drawn using MCMC. This was considered the gold standard for this analysis. However, we also consider an approximate model-based on Gaussian approximation of the Poisson and binomial distributions used in the exact hierarchical model. By using the Gaussian approximations, analytic integration can be used to marginalize over latent components. Inference can then be made by maximizing the posterior to find the mode. Following this we investigate both delta-method and parametric bootstrap approaches for calculating abundance and the associated standard errors with batch sampling data collected on northern fur seals in 2016. Each of the three newly proposed methods produced virtually identical estimates and standard errors. In addition, the parametric bootstrap approximation to a posterior sample was also virtually the same as the MCMC derived sample. There were a handful of small differences in the point estimates of abundance but these were not large enough to be especially notable. There were some noticeable differences in uncertainty estimates. The production estimate coefficients of variation ranged from 2.5--9.5\% for the model-based estimates, but 0.0--12.5\% for the design-based estimates. The design-based estimates of uncertainty were more volatile using the design-based method with some standard error estimates unreasonably small. Through a case study we have provided support for using Gaussian approximation in \(N\)-mixture type models when abundance is relatively large. These situations are typically challenging for fitting models using any sort of marginalization because there is no analytic solution for the exact models. However, when abundances are large using a Gaussian approximated model allows for analytic integration over latent abundance states which can greatly facilitate methodology such as maximum likelihood or posterior inference.
+\end{abstract}
+\begin{document}
+
+\flushbottom
+\maketitle
+% * <john.hammersley@gmail.com> 2015-02-09T12:07:31.197Z:
+%
+%  Click the title above to edit the author information and abstract
+%
+\thispagestyle{empty}
+
+
+\section*{Introduction}
+
+Estimation of pup production has been the cornerstone for population and management decisions for the Pribilof Islands herd of northern fur seals (\emph{Callorhinus ursinus}; NFS) for over 50 years. The design-based method of estimating production has remained largely unchanged since the late 1960s. Here we consider a modern hierarchical modeling approach for abundance estimation that allows for day-to-day differences in the proportion of pups that are available to be counted, as well as different rates of detection among observers. Although we do not make use of it here, the model-based version allows for use of covariates might be helpful in the future for modeling differences in parameters like detection probabilities or allow for addition of prior information on the proportion of animals that are marked. Although this method was designed and applied to NFS pup abundance, it is a general mark-resight modelling approach that could be used for many other species.
+
+Since the mid-1960s, estimation of NFS pup production in the Pribilof Islands, Alaska has been accomplished using a design-based mark-resight method where pups are batch marked and resighted on at least 2 later dates. \cite{CHAPMAN:1968ys}, \cite{york1996xx}, and \cite{towell2016xx} provide detailed descriptions of the marking, resight, and current production estimation methods. In the first half of August, pups are batch marked by shearing the guard hairs on top of the head to make the light underfur conspicuous to observers. The light-colored underfur represents the mark. The goal of shearing is to mark approximately 10\% of the pups on each rookery. The 10\% is based on the previous estimate of pup production for the sample rookeries (typically 2 years prior). Shear marks are allocated proportionally on each rookery by section according to the fraction of the total number of breeding males counted in each section. Thus, the marks are spatially allocated to roughly match spatial abundance of pups. Marked and unmarked pups on each rookery are counted by two observers scanning (with the aid of binoculars when necessary) on at least two occasions.
+
+Here we briefly describe the current design-based method of estimation. It is based on the cluster sampling method outlined by \cite{CHAPMAN:1968ys}; however, the cluster groups are kept fixed at 25 pups, therefore the estimator formulas can be reduced to those below. In the current method, each resight day is considered an independent replicate. For each replicate \(j=1,2\), a mark-frequency estimate is calculated, \(\hat f_{j}\) (total marks counted / total pups observed), the frequency of marked pups to total pups counted on the \(j\)th occasion. From this frequency estimate the occasion-specific estimate of the number of pups alive at the time of shearing is estimated as,
+\[
+\hat{A}_{j} = M / \hat{f}_{j},
+\]
+where \(M\) is the total number of pups marked. Note that this occasion specific estimate is identical to the classic Lincoln-Petersen estimator \cite{Lincoln:1930aa}. However, the sampling procedure is different with pups often being counted twice by the two different observers, thus, a different standard error (SE) method is used. The full estimate is calculated by \(\hat{A} = mean(\hat{A}_{j})\). The standard error of this estimate can be estimated using the fact that \(var(\bar x) = var(x)/n\). Thus, for 2 resight occasions, this becomes
+\[
+SE(\hat A) = |\hat A_{1} - \hat A_{2}|/2.
+\]
+Because the \(SE(\hat A)\) is based on only two replicated samples the estimate can become unstable, often producing estimates that are unreasonably small. See the Results section for example.
+
+In addition to mark-resight methods that are applied to live pups, dead pups are counted on a sample of rookeries. Each sampled rookery is completely examined and the number of dead pups are recorded. For these sampled rookeries, the number of dead pups is added to obtain the pup production estimate \(\hat{N} = \hat{A} + D\). For those rookeries \(SE(\hat{N}) = SE(\hat{A})\). However, for rookeries without dead pup samples, \(\hat{N} = \hat{A}(1+\hat{r})\) where the ratio of dead pups to live pups, \(\hat{r}\), is estimated using a ratio estimation method \cite{cochran1977sampling} based on the rookeries where dead pups are counted.
+
+In this paper we propose an updated, model-based methodology for analyzing the same batch mark data that are currently collected. The model-based approach is similar in spirit to the open N-mixture batch sampling models of \cite{cowen2017hidden} but we consider the populations to be closed over the study, however, different proportions of the population are unavailable for sampling in each resight occasion. Thus, abundance does not follow the open population models of \cite{dail2011models}, but rather in each resight occasion animals have a probability of not being detectable at all. This may occur if they are in the water or not visible from sampling positions. In addition to availability, the model-based approach also allows explicit modeling of different detection rates between observers. Finally, with the model-based approach we can directly model neonate mortality simultaneously with the mark-resight data without the need to use the additional bull count data to separately estimate dead pup numbers. Although we do not explore it here, by explicitly modeling neonate mortality, we also introduce the possibility of modeling this parameter with environmental covariates that may be useful in determining what conditions lead to increased (or decreased) neonate mortality.
+
+We begin development in the following section describing the model pieces in a hierarchical version of an N-mixture model \cite{royle2004n} that accounts for differential availability of animals during each resight occasion. Next, we propose two different methods of Bayesian estimation for abundance and model parameters. The first is a straightforward implementation in the Markov chain Monte Carlo (MCMC) software \texttt{JAGS} \cite{plummer2003jags}. In the second approach we consider an asymptotic approximation similar to \cite{brintz2018asymptotic} where the latent discrete components of the model are treated as continuous valued and modeled with a multivariate normal distribution (Normal). This is motivated by the fact that the unknown abundance is large and little is lost empirically but much is gained analytically by this approximation. The unobserved discrete components can be marginalized out of the model to improve numerical procedures of estimation. In addition, one can also use automatic differentiation-based software such as \texttt{stan} \cite{gelman2015stan} and Template Model Builder {{\tt TMB})\cite{kristensen2016tmb} which cannot fit models with discrete latent components directly. Both of these approaches are used to fit data collected in 2016 by the National Marine Fisheries Service as part of the biannual monitoring survey of Pribilof Islands pup production.
+
+
+\section*{Methods}
+
+Pup production, \(N\), is defined as the combined total of the number of pups alive at the time of the marking study, \(A\), as well as, the number of pups that have died before marking, \(D\). The notation for the descriptions in this section are summarized in Table \ref{tab:notation} for further reference. Notably, \(i\) indexes a rookery (or site), \(j\) indexes a resight occasion, and \(k\) indexes an observer. The number of pups batch marked at each rookery is \(M_i\), the unobserved total number of unmarked pups is \(U_i\), and the number of pups that died before the survey is \(D_i\), thus, pup production is \(N_i = M_i + U_i +D_i\). For all rookeries \(M_i\) is known and for \emph{some} rookeries \(D_i\) is observed via dead pup counts that take place after the resighting occasions. While this likely does not represent the full number of dead pups it helps to account for neonatal death in the final estimate (it is usually on the order of 2--5\% of \(N\)). The number of marked and unmarked pups counted by the \(k\)th observer on the \(j\)th occasion is \(m_{ijk}\) and \(u_{ijk}\), respectively.
+
+\begin{table}
+
+\caption{\label{tab:notation}Glossary of terms for the mark-resighting of northern fur seals.}
+\centering
+\begin{tabular}[t]{l>{\raggedright\arraybackslash}p{10cm}}
+\toprule
+Notation & Description\\
+\midrule
+$i$ & Rookery (site) index ($i=1,\dots,I$)\\
+$j$ & Resight occasion index ($j=1,\dots,J$)\\
+$k$ & Observer within occasion index ($k=1,\dots,K$)\\
+$N_i$ & Total pup production ($N_i = M_i + U_i + D_i$)\\
+$D_i$ & Number of pups that died before marking\\
+\addlinespace
+$M_i$ & Number of pups batched marked\\
+$U_i$ & Number of pups that are unmarked\\
+$A_i$ & Number of pups alive at marking ($A_i = M_i+U_i$)\\
+$M_{ij}$ & The number of marked pups available for resight on $j$th occasion\\
+$U_{ij}$ & The number of unmarked pups available for resight on $j$th occasion\\
+\addlinespace
+$m_{ijk}$ & Number of marked pups counted on resight effort $j$ by the $k$th observer\\
+$u_{ijk}$ & Number of unmarked pups counted on resight effort $j$ by the $k$th observer\\
+$\xi_i$ & Probability that a pup dies before batch marking\\
+$\tau_i$ & Probability that a pup is marked given it is alive when marking occurs\\
+$\alpha_{ij}$ & Probability that a pup can be observed at a resight occasion by an observer ($e.g.$, not in the water or hidden from view)\\
+\addlinespace
+$\delta_{ijk}$ & Probability that a visible pup is counted at a rookery by an observer\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\hypertarget{a-hierarchical-n-mixture-approach}{%
+\subsection{A hierarchical N-mixture approach}\label{a-hierarchical-n-mixture-approach}}
+
+The model-based approach we develop here seeks to improve on the design-based method of the last section by accounting for variability in the detection process, as well as differing availability of animals to be observed between resighting occasions. This latent availability induces positive correlation between observers on any single occasion.
+
+The top level of the hierarchical model begins with the usual N-mixture model choice of
+\[
+[N_i|\lambda_i] = \text{Poisson}(\cdot|\lambda_i)
+\]
+for the pup production model, where \(\lambda_i\) is a rate hyperparameter. In all the description herein, we use the notation ``\([x]\)'' and \([x|y]\)" to represent the probability density function (PDF) of \(x\) and the conditional PDF of \(x\) given \(y\). We do not necessarily have to use this model, but it can make it sufficiently uninformative (see following section).
+
+The second level of the model partitions the \(N_i\) pups born into three categories: (1) those that died before the survey, \(D_i\), (2) those that were marked at the start of the survey, \(M_i\), and finally, all those pups that were not marked, \(U_i\). Assuming that each pup is independently placed in 1 of the 3 categories, we can integrate over the unobserved \(N_i\) to obtain the model
+\[
+\begin{aligned}[]
+[D_i, M_i, U_i|\tau_i,\lambda_i] &= \text{Poisson}(D_i|\xi_i\lambda_i) \\ & \quad \times\text{Poisson}(M_i|(1-\xi_i)\tau_i\lambda_i)\\
+&\qquad \times \text{Poisson}(U_i|(1-\xi_i)(1-\tau_i)\lambda_i)
+\end{aligned}
+\]
+where \(\xi\) is the neonate mortality probability, and \(\tau_i\) is the probability that a pup is marked given it was alive at the start of the survey. Notice that we actually do not need to estimate \(N_i\) as a parameter, because \(M_i\) is known; we only need estimates of \(U_i\) and any unobserved \(D_i\) to estimate pup production.
+
+Now that we have defined a model for \((M_i, U_i, D_i)\) we can examine the next level of the model which is the availability process for how many pups are available to be observed on subsequent resights. On occasion \(j\) the number of pups from each subpopulation that are observable (i.e., in the open and not in the water) is modeled by
+\[
+[M_{ij}, U_{ij}|M_i,U_i,\alpha_{ij}] =\text{Binomial}(M_{ij}|M_i,\alpha_{ij}) \times \text{Binomial}(U_{ij}|U_i,\alpha_{ij});
+\]
+that is, each individual pup is randomly available for observation on each occasion. Given the number of pups available from each subpopulation, each observer randomly detects each pup in their counts. Thus for observer \(k\) on occasion \(j\) the data models for the observed counts are
+\[
+[m_{ijk}, u_{ijk} |M_{ij},U_{ij},\delta_{ijk}] = \text{Binomial}(m_{ijk}|M_{ij},\delta_{ijk}) \times \text{Binomial}(u_{ijk}|U_{ij},\delta_{ijk}).
+\]
+In the collection of the NFS pup production data here, great care is taken to avoid double counting the same individuals. The resighters methodically proceed through the rookery counting small groups that are not spatially overlapping. However, if it is not possible to assume that individuals will only be observed, at most, once during an occasion, then another distribution can be used here. For example, we might assume that marked and unmarked animals are encountered with a rate proportional to availability, thus,
+\[
+[m_{ijk}, u_{ijk} |M_{ij},U_{ij},\delta_{ijk}] = \text{Poisson}(m_{ijk}|\delta_{ijk}M_{ij}) \times \text{Poisson}(u_{ijk}|\delta_{ijk}U_{ij}).
+\]
+would be a good model for this situation. In the remainder of this paper, we will assume the binomial version for the observation model.
+
+For each rookery, the complete likelihood for the hierarchical model is
+\[
+\begin{aligned}[]
+[\mathbf{y}_i,\mathbf{X}_i|\boldsymbol{\theta}_i] &\propto [(D_i, M_i, U_i)|\xi_i, \tau_i, \lambda_i]\\
+& \qquad \times \prod_j \left\{[M_{ij}, U_{ij}|M,U,\alpha_{ij}]\times \prod_k [m_{ijk}, u_{ijk} |M_{ij},U_{ij},\delta_{ijk}]\right\},
+\end{aligned}
+\]
+where \(\boldsymbol{\theta}_i\) is used to denote all of the parameters such as \(\delta_{ijk}\) and \(\alpha_{ij}\), \(\mathbf{X}_i\) represents all the latent abundance values (\(U_i\), \(M_{ij}\), and \(U_{ij}\)), and \(\mathbf{y}_i\) is the observable data (\(M_i\), \(m_{ijk}\), and \(u_{ijk}\)). Note, that for some rookeries, \(D_i\) will be included in \(\mathbf{X}_i\) and for the others it will be in \(\mathbf{y}_i\). Now, we can make inference to the latent quantities and parameters with the full complete-data likelihood,
+\[
+[\mathbf{y},\mathbf{X}|\boldsymbol{\theta}] = \prod_i [\mathbf{y}_i,\mathbf{X}_i|\boldsymbol{\theta}_i],
+\]
+by taking the product over rookeries.
+
+\hypertarget{bayesian-inference}{%
+\subsection{Bayesian inference}\label{bayesian-inference}}
+
+Traditional maximum likelihood estimation is difficult as the appropriate likelihood to maximize would be
+\[
+[\mathbf{y}|\boldsymbol{\theta}] = \sum_{\mathbf{X}}[\mathbf{y},\mathbf{X}|\boldsymbol{\theta}], 
+\]
+where the sum is over all possible values of the high-dimensional, unobserved \(\mathbf{X}\). Numerically calculating the integrated likelihood over every iteration of a maximization routine would be daunting. \cite{cowen2017hidden} illustrate an efficient numerical method for an open population model using a hidden Markov model formulation. However, the latent structure here is not time indexed in a way that makes HMM formulation straightforward.
+
+The most straightforward way of estimating parameters and abundance from the model developed in the previous section is to sample from the posterior distribution using MCMC. The appropriate posterior distribution in this case
+\[
+[\boldsymbol{\theta}, \mathbf{X}|\mathbf{y}] \propto [\mathbf{y},\mathbf{X}|\boldsymbol{\theta}] \times [\boldsymbol{\theta}]
+\]
+where \([\boldsymbol{\theta}]\) is the prior distribution of the parameters.
+
+For specification of the prior distribution we will begin with \(\lambda_i\). \cite{link2013cautionary} suggested that \(N_i\), should follow the prior distribution \([N_i]\propto N_i^{-1}\), an improper prior. This can be approximated with the Poisson-gamma mixture
+\[
+\begin{aligned}[]
+[N] &= \int_{\lambda}\text{Poisson}(N|\lambda)\ \text{gamma}(\lambda|a, a)\  d\lambda \\
+&\approx N^{-1} \text{ as } a \to 0.
+\end{aligned}
+\]
+Thus, we suggest \([\lambda_i|a] = \text{gamma}(\lambda_i|a, a)\) with \(a=\text{1.0e-6}\) (or something small). For the detection and availability parameters, we switch to the logit parameterization
+\[
+\text{logit}(\delta_{ijk}) = \mathbf{x}_{ijk}'\boldsymbol{\beta}_\delta, \quad \text{and}\quad  \text{logit}(\alpha_{ij}) = \mathbf{x}_{ij}'\boldsymbol{\beta}_\alpha,
+\]
+where \(\mathbf{x}\) contains covariates such as weather conditions or observer related variables. They are not necessarily the same between the parameter types. A prior distribution is specified for each \(\boldsymbol{\beta}\); such as a multivariate normal distribution. The mortality and marking probabilities, \(\xi_i\) and \(\tau_i\) could also be modeled this way, but for this investigation we leave their parameterization in its natural form and use beta or uniform prior distributions for those parameters.
+
+\hypertarget{an-approximate-hierarchical-model}{%
+\subsection{An approximate hierarchical model}\label{an-approximate-hierarchical-model}}
+
+An alternative to working with the model as it stands in the ``exact'' form presented in the previous section is to analytically integrate over the latent components to produce the appropriate likelihood for the model and data. However, the latent components, \(U_i\), \(U_{ij}\), and \(M_{ij}\) are all discrete with infinite upper bounds, thus the marginalization over these components involves many intractable infinite sums. Thus, straight forward maximum likelihood is difficult. The typical approach is to pick fixed upper bounds and execute the sums to those bounds (e.g., \cite{dail2011models}, \cite{schmidt2015estimating}, \cite{cowen2017hidden}). With large abundances this is still a monumental task. In the example of the next section the smallest rookery produces approximately 500 pups, so, the sums necessary become quite cumbersome.
+
+In an attempt to overcome the computational issues of large abundances in open N-mixture models \cite{brintz2018asymptotic} propose a normal approximation that allows analytic integration to be performed, thus producing an asymptotically approximate integrated likelihood. Maximization of the likelihood can then be accomplished in a fraction of the time MCMC takes to run while still producing comparable results. In this section, we derive an asymptotically approximate likelihood for our batch marking capture-recapture model using the same principles.
+
+The goal of this approach is to allow modeling the same data with an approximation of the general form
+\[
+\begin{aligned}[]
+[\mathbf{y}_i|\boldsymbol{\theta}] &= \sum_{\mathbf{X}_i}[ \mathbf{y}_i,\mathbf{X}_i|\boldsymbol{\theta}] \\
+&\approx \text{Normal}(\mathbf{u}_{i}| \boldsymbol{\mu}_{i}^{(u)}, \boldsymbol{\Sigma}_{i}^{(u)}) \times \text{Normal}(\mathbf{m}_{i}| \boldsymbol{\mu}_{i}^{(m)}, \boldsymbol{\Sigma}_{i}^{(m)}, M_i) \\
+&\qquad \times [M_i|\xi_i, \tau_i, \lambda_i] \times [D_i|\xi_i, \lambda_i].
+\end{aligned}
+\]
+The approximation is accomplished by matching the mean vectors and covariance matrices to that of the marginal distribution of \(\mathbf{m}_{i}\) and \(\mathbf{u}_{i}\) after integrating over the latent components.
+
+To obtain the multivariate normal means and covariance matrices in the approximation, we will use the same moment matching approach as \cite{brintz2018asymptotic}. The following means and covariance are derived using the independence of \(M_i\) and \(U_i\) given the parameters and the law of total covariance. First, the mean vectors, are straightforward to produce;
+\[
+\mu_{ijk}^{(m)} = E[m_{ijk}|M_i, \boldsymbol{\theta}] = M_i\alpha_{ij}\delta_{ijk}
+\]
+and
+\[
+\mu_{ijk}^{(u)} = E[u_{ijk}|\boldsymbol{\theta}] = \lambda_i(1-\xi)(1-\tau_i)\alpha_{ij}\delta_{ijk}.
+\]
+The covariance becomes a little more notationally challenging, but they can also be calculated using the standard unconditional variance formula, \(Cov(X,Y) = E[Cov(X,Y|Z)] + Cov\{E(X|Z), E(Y|Z)\}\). First we define some terms to make the notation easier to follow. We will use \(\omega=(i,j,k)\) to index a specific site, occasion and observer. Next we define the three functions
+
+\begin{itemize}
+\tightlist
+\item
+  \(\sigma_i(\omega, \omega') = \alpha_{ij}\alpha_{ij'}\delta_{ijk}\delta_{ij'k'}\) for \(i=i'\) and 0 else-wise
+\item
+  \(\sigma_{ij}(\omega, \omega') = \alpha_{ij}(1-\alpha_{ij})\delta_{ijk}\delta_{ijk'}\) for \(i=i'\), \(j=j'\) and 0 else-wise
+\item
+  \(\sigma_{ijk}(\omega, \omega') = \alpha_{ij}\delta_{ijk}(1-\delta_{ijk})\) for \(\omega=\omega'\) and 0 else-wise
+\end{itemize}
+
+Now, the entries of the covariance matrices can be specified as
+\[
+Cov(m_\omega,m_{\omega'}|M_i, \boldsymbol{\theta}) = M_i\{\sigma_{ij}(\omega, \omega') + \sigma_{ijk}(\omega, \omega')\},
+\]
+for \(i=i'\), \(j=j'\), and 0 else-wise. For the unmarked animals we are also marginalizing over \(U_i\) as well, covariances are thus positive over different occasions; that is
+\[
+Cov(u_\omega,u_{\omega'}|\boldsymbol{\theta}) = \lambda_i(1-\xi)(1-\tau_i)\{\sigma_i(\omega, \omega')+\sigma_{ij}(\omega, \omega') + \sigma_{ijk}(\omega, \omega')\},
+\]
+for \(i=i'\) and 0 else-wise.
+
+Using this approximation, we can form the marginal posterior distribution,
+\[
+[\boldsymbol{\theta}|\mathbf{y}] \propto 
+\prod_i [\mathbf{y}_i|\boldsymbol{\theta}] \times [\boldsymbol{\theta}].
+\]
+From this specification we can use MCMC to draw from the posterior distribution or use optimization methods to make simulation free inference. The major numerical argument for this approximation is that it marginalizes over all discrete valued components of the model. Therefore, the remaining parameters are all continuously valued, thus MCMC or optimization can be carried out with software that uses automatic differentiation such as \texttt{stan} or \texttt{TMB}. In addition, it is often note that marginalizing over some model components can improve posterior sampling or optimization \cite{van2008partially}.
+
+Now that we have integrated \(\mathbf{X}_i\) out of the models, it begs the question, how can we now estimate \(N_i = M_i + U_i + D_i\) when \(U_i\) and some \(D_i\) are no longer in the model? There are two approaches we can take, but they are both based on the posterior predictive distribution of the needed quantities. If \(D_i\) is unobserved, then we can write down the predictive distribution
+\[
+[U_i, D_i|\mathbf{y}_i] = \int_{\boldsymbol{\theta}} [D_i|\xi_i, \lambda_i]\ [U_i|\xi_i, \tau_i, \lambda_i]\ [\boldsymbol{\theta}|\mathbf{y}_i] d\boldsymbol{\theta}.
+\]
+The obvious first approach for making abundance inference is to sample from these distributions by first drawing a sample from \([\boldsymbol{\theta}|\mathbf{y}_i]\) using, say MCMC, then for each draw, select a \(D_i\) and \(U_i\) from their respective Poisson distributions. However, we were seeking to produce a MCMC free method which might be computationally inexpensive. So, we can optimize \([\boldsymbol{\theta}|\mathbf{y}_i]\) with respect to \(\boldsymbol{\theta}\) to obtain the posterior mode, then using the calculated posterior Hessian, \(\hat{\mathbf{H}}\), further approximate
+\[
+[\boldsymbol{\theta}|\mathbf{y}_i] \approx \text{Normal}\left(\hat{\boldsymbol{\theta}}, -\hat{\mathbf{H}}^{-1}\right).
+\]
+From this approximation one can readily draw thousands of samples in seconds. We will denote this approach as the parametric bootstrap method.
+
+For an alternate fully simulation-free approach we can use the same technique as \cite{johnson2010model}. That is, we can use the standard unconditional mean and variance formulas
+
+\begin{itemize}
+\tightlist
+\item
+  \(E(X) = E_Y\{E_X(X|Y)\}\)
+\item
+  \(Var(X) = Var_Y\{E_X(X|Y)\} + E_Y\{Var_X(X|Y)\}\)
+\end{itemize}
+
+to approximate the mean (the optimal predictor) and variance of the predictive distribution for \(U_i\) and \(D_i\). That is,
+\[
+\begin{aligned}[]
+\hat{N}_i &= E_{\boldsymbol{\theta}}\left\{ E(M_i + U_i + D_i|\boldsymbol{\theta}) \right\} \\
+&\approx M_i + (1-\hat{\xi}_i)(1-\hat{\tau}_i)\hat{\lambda}_i + \hat{\xi}_i\hat{\lambda}_i\\
+&= M_i + \hat{U}_i + \hat{D}_i,
+\end{aligned}
+\]
+where the last term is replaced with \(D_i\) if it is observed. The parameter estimates can be obtained by the posterior mode \(\hat{\boldsymbol{\theta}}\) found by optimization as before. The prediction variance is calculated by
+\[
+\begin{aligned}[]
+Var(\hat{N}_i) &= Var_{\boldsymbol{\theta}}\left\{ E(M_i + U_i + D_i|\boldsymbol{\theta}) \right\} + E_{\boldsymbol{\theta}}\left\{Var(M_i + U_i + D_i|\boldsymbol{\theta})\right\}
+\\
+&\approx Var_{\boldsymbol{\theta}}\{\hat{U}_i+\hat{D}_i\} + M_i + \hat{U}_i + \hat{D}_i.
+\end{aligned}
+\]
+Because \(\hat{U}_i\) and \(\hat{D}_i\) are just nonlinear functions of the parameters we can approximate the variance using the delta method \cite{Dorfman:1938af} based on the asymptotic posterior variance, \(-\hat{\mathbf{H}}^{-1}\) \cite{johnson2010model}.
+
+There are benefits to both the bootstrap and delta method approaches. For the parametric bootstrap approach, the main benefit is the ease in which estimates of derived parameters can be calculated. As with the full MCMC one must only calculate the derived parameters for all the sample draws and one has a posterior sample of the derived parameter. In the next section, for example, we examine total pup production for each island. The delta method approach maintains the benefit that the calculations are quick and free of simulation issues such as choice of sample size, etc. In the following section, we examine how each of these approximate approaches compare to the ``exact'' MCMC approach, as well as, the traditional design-based estimates.
+
+\hypertarget{pup-production-in-2016}{%
+\subsection{Pup production in 2016}\label{pup-production-in-2016}}
+
+Here we analyze the northern fur seal pup production data obtained in 2016 for monitoring pup production in the Pribilof Islands, Alaska (Figure \ref{fig:rook}). There are 19 separate rookeries on the two main islands in the archipelago, St.~Paul Island in the north and St.~George Island to the south. The rookeries on St.~Paul Island produce approximately 80\% of the pups and contains the majority of the rookeries. The 2016 data are fully described by \cite{Testa:2018aa}. We built an R \cite{rcite} package called \texttt{mbpp} that contains the model estimation procedures presented in the previous section and the data analyzed herein. This package is available at \url{https://github.com/dsjohnson/mbpp} and can be directly installed using the devtools package. The github page provides instructions for installation. We use the MCMC software \texttt{JAGS} \cite{plummer2003jags} through the \texttt{R} package \texttt{R2jags} \cite{Su:2015aa} to sample from the exact hierarchical model and the R package \texttt{TMB} \cite{kristensen2016tmb} to optimize the integrated posterior distribution for the approximate model bootstrap and delta approaches.
+
+\begin{figure}[t]
+
+{\centering \includegraphics[width=0.9\linewidth]{prib_rook} 
+
+}
+
+\caption{Map of northern fur seal rookeries in the Pribilof Islands, Alaska. The Pribilof Islands are an archipelago in the Bering Sea off the coast of Alaska. The main islands are St. Paul Island, to the north, and St. George Island, to the south. Note, the distance between the islands is not to scale in the right-hand figure. The rookeries are each labeled by their 3-letter NMFS rookery code.}\label{fig:rook}
+\end{figure}
+
+For each of the rookeries (\(I=19\)) in 2016, there were 2 observers (\(J=2\)) who visited each rookery twice (\(K=2\)) after shear-marking to count marked and unmarked pups. Each of the 3 model fitting methods presented in the previous sections was used to estimate pup production. Parameterizations and prior distributions are summarized in Table \ref{tab:param} for reference. For this analysis we used the previously suggested gamma distributions for each rookery to approximate a scale prior distribution for \(N_i\). Neonate mortality was modeled as constant within each island so the number of dead pups at unsampled rookeries could be predicted. The proportion of shear-marked pups (\(\tau_i\)) was separately modeled for each rookery with a uniform prior. For the availability (\(\alpha_{ij}\)) and detection (\(\delta_{ijk}\)) we used a logistic regression parameterization to model rookery, occasion, and observer differences. The coefficients for each term were treated as normal random effects. So, for each term in the model, a variance component was estimated. This allows for regularization of the coefficients to be used for model selection \cite{hooten2015guide}. An exponential prior distribution was used for each of the variance parameters to penalize complexity \cite{martins2017penalising}.
+
+For each island, the MCMC algorithm was run for 100,000 iterations following a burnin of 10,000 iterations. Every 100th iteration was retained to obtain a final sample of 1,000 posterior draws. In order to fit the approximate model, we used Laplace approximation functionality in \texttt{TMB} to numerically integrate over the random coefficients and maximize the marginal likelihood. Then we used the delta-method and parametric bootstrap approaches for inference.
+
+\begin{table}
+
+\caption{\label{tab:param}Parameter formulation and prior distribution specification. The 'Model' column uses R notation to specify variation in the parameters over rookeries, occasions, and observers. Pup production was estimated separately for each island, therefore an intercept only model ($\sim 1$) would mean that the parameter is constant within each island.}
+\centering
+\begin{threeparttable}
+\begin{tabular}[t]{lll}
+\toprule
+Parameter & Model & Prior Distributions\\
+\midrule
+$\lambda_i$ & $\sim$ rookery & $[\lambda_i] = \text{Gamma}(1.0 e^{-6}, 1.0 e^{-6})$\\
+$\tau_i$ & $\sim$ rookery & $[\tau_i] = \text{Uniform}(0, 1)$\\
+$\xi_i$ & $\sim$ 1 & $[\xi] = \text{Uniform}(0, 1)$\\
+$\text{logit }\alpha_{ij}$ & $\sim$ rookery & $[\boldsymbol{\beta}_{\alpha, \text{term}}] = \text{Normal}(\mathbf{0}, \sigma^2_{\text{term}}\mathbf{I})^{*}$\\
+$\text{logit }\delta_{ijk}$ & $\sim$ rookery * occasion * observer & $[\boldsymbol{\beta}_{\delta, \text{term}}] = \text{Normal}(\mathbf{0}, \gamma^2_{\text{term}}\mathbf{I})^{*}$\\
+\addlinespace
+$\sigma_{\text{term}}$ & $\sim$ 1 & $[\sigma_{\text{term}}] = \text{Exponential}(1)$\\
+$\gamma_{\text{term}}$ & $\sim$ 1 & $[\gamma_{\text{term}}] = \text{Exponential}(1)$\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item[*] The index `term' is used to represent each term in the model specification; e.g., intercept, rookery main effects, rookery*occasion interaction, etc.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+
+
+\section*{Discussion}
+
+The Discussion should be succinct and must not contain subheadings.
+
+\section*{Methods}
+
+Topical subheadings are allowed. Authors must ensure that their Methods section includes adequate experimental and characterization data necessary for others in the field to reproduce their work.
+
+\bibliography{bibLibrary}
+
+\noindent LaTeX formats citations and references automatically using the bibliography records in your .bib file, which you can edit via the project menu. Use the cite command for an inline citation, e.g.  \cite{Hao:gidmaps:2014}.
+
+For data citations of datasets uploaded to e.g. \emph{figshare}, please use the \verb|howpublished| option in the bib entry to specify the platform and the link, as in the \verb|Hao:gidmaps:2014| example in the sample bibliography file.
+
+\section*{Acknowledgements (not compulsory)}
+
+Acknowledgements should be brief, and should not include thanks to anonymous referees and editors, or effusive comments. Grant or contribution numbers may be acknowledged.
+
+\section*{Author contributions statement}
+
+Must include all authors, identified by initials, for example:
+A.A. conceived the experiment(s),  A.A. and B.A. conducted the experiment(s), C.A. and D.A. analysed the results.  All authors reviewed the manuscript. 
+
+\section*{Additional information}
+
+To include, in this order: \textbf{Accession codes} (where applicable); \textbf{Competing interests} (mandatory statement). 
+
+The corresponding author is responsible for submitting a \href{http://www.nature.com/srep/policies/index.html#competing}{competing interests statement} on behalf of all authors of the paper. This statement must be included in the submitted article file.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{stream}
+\caption{Legend (350 words max). Example legend text.}
+\label{fig:stream}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+Condition & n & p \\
+\hline
+A & 5 & 0.1 \\
+\hline
+B & 10 & 0.01 \\
+\hline
+\end{tabular}
+\caption{\label{tab:example}Legend (350 words max). Example legend text.}
+\end{table}
+
+Figures and tables can be referenced in LaTeX using the ref command, e.g. Figure \ref{fig:stream} and Table \ref{tab:example}.
+
+\end{document}
